@@ -23,8 +23,8 @@ Dictionary<string, (string Position, int Rating)> players = new()
     {"Domagoj Vida",("DF", 76)},
     {"Ante Budimir",("FW", 76)},
 };
-int currentMatch = -1;
-(string Team1, string Team2, int Score1, int Score2, bool isOver)[] matchesGroupF = 
+int currentMatch = 0;
+(string Team1, string Team2, int Score1, int Score2, bool isOver)[] matchesGroupF =
 {
     ("Morocco","Croatia",0,0,false), // Match 1
     ("Belgium","Canada",0,0,false),
@@ -64,7 +64,7 @@ void ValidatePlayerRating(int rating)
 // Data sanitization
 int SanitizePlayerRating(int rating)
 {
-    if(rating > 100)
+    if (rating > 100)
         return 100;
     if (rating < 0)
         return 0;
@@ -117,11 +117,11 @@ int Menu(string[] options)
     }
     return export.ToArray();
 }
-(string Name, string Position, int Rating)[] SelectBest11()
+(string Name, string Position, int Rating)[] PlayersSorted()
 {
     List<(string Name, string Position, int Rating)> players = new(PlayersToArray());
     players.Sort((e1, e2) => e2.Rating.CompareTo(e1.Rating));
-    return players.GetRange(0, 11).ToArray();
+    return players.ToArray();
 }
 
 // Menus
@@ -136,7 +136,7 @@ void MainMenu()
         "Kontrola igraca",
     };
 
-    while(true)
+    while (true)
     {
         int userSelection = Menu(mainMenuOptions);
 
@@ -169,14 +169,14 @@ void Training()
 {
     Console.Clear();
     Console.WriteLine($"| {"Ime i prezime",-21}| {"Prethodni rating",-17}| {"Novi rating",-13}| {"Razlika",-9}|");
-    for (int i= 0; i < players.Count; i++)
+    for (int i = 0; i < players.Count; i++)
     {
         var name = players.Keys.ElementAt(i);
         int oldRating = players[name].Rating;
 
         Random r = new();
         int diff = (int)(r.Next(-5, 6) * 0.01 * oldRating);
-        players[name] = (players[name].Position,SanitizePlayerRating(diff + oldRating));
+        players[name] = (players[name].Position, SanitizePlayerRating(diff + oldRating));
 
         Console.WriteLine(@$"| {name,-21}| {oldRating,-17}| {players[name].Rating,-13}| {diff,-9}|");
     }
@@ -186,7 +186,7 @@ void Training()
 void Match()
 {
     Console.Clear();
-    
+
     WaitForUser();
 }
 
