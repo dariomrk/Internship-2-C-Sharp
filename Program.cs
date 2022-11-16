@@ -23,6 +23,16 @@ Dictionary<string, (string Position, int Rating)> players = new()
     {"Domagoj Vida",("DF", 76)},
     {"Ante Budimir",("FW", 76)},
 };
+int currentMatch = -1;
+(string Team1, string Team2, int Score1, int Score2, bool isOver)[] matchesGroupF = 
+{
+    ("Morocco","Croatia",0,0,false), // Match 1
+    ("Belgium","Canada",0,0,false),
+    ("Belgium","Morocco",0,0,false),
+    ("Croatia","Canada",0,0,false), // Match 2
+    ("Croatia","Belgium",0,0,false), // Match 3
+    ("Canada","Morocco",0,0,false),
+};
 
 // Data validation
 void ValidatePlayerName(string name)
@@ -96,6 +106,24 @@ int Menu(string[] options)
     }
 }
 
+// Data manipulation
+(string Name, string Position, int Rating)[] PlayersToArray()
+{
+    List<(string Name, string Position, int Rating)> export = new();
+
+    foreach (var player in players)
+    {
+        export.Add((player.Key, player.Value.Position, player.Value.Rating));
+    }
+    return export.ToArray();
+}
+(string Name, string Position, int Rating)[] SelectBest11()
+{
+    List<(string Name, string Position, int Rating)> players = new(PlayersToArray());
+    players.Sort((e1, e2) => e2.Rating.CompareTo(e1.Rating));
+    return players.GetRange(0, 11).ToArray();
+}
+
 // Menus
 void MainMenu()
 {
@@ -122,6 +150,7 @@ void MainMenu()
                 break;
             case 2:
                 // Odigraj utakmicu
+                Match();
                 break;
             case 3:
                 //Statistika
@@ -147,10 +176,17 @@ void Training()
 
         Random r = new();
         int diff = (int)(r.Next(-5, 6) * 0.01 * oldRating);
-        players[name] = (players[name].Position,diff + oldRating);
+        players[name] = (players[name].Position,SanitizePlayerRating(diff + oldRating));
 
         Console.WriteLine(@$"| {name,-21}| {oldRating,-17}| {players[name].Rating,-13}| {diff,-9}|");
     }
+    WaitForUser();
+}
+
+void Match()
+{
+    Console.Clear();
+    
     WaitForUser();
 }
 
