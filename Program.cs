@@ -23,6 +23,7 @@ Dictionary<string, (string Position, int Rating)> players = new()
     {"Domagoj Vida",("DF", 76)},
     {"Ante Budimir",("FW", 76)},
 };
+Dictionary<string, int> fwGoals = new();
 string[] validPositions = new string[] { "GK", "DF", "MF", "FW" };
 int currentMatch = 0;
 (string Team1, string Team2, int Score1, int Score2, bool isOver)[] matchesGroupF =
@@ -33,6 +34,13 @@ int currentMatch = 0;
     ("Croatia","Canada",0,0,false),
     ("Croatia","Belgium",0,0,false),
     ("Canada","Morocco",0,0,false),
+};
+Dictionary<string, (int Points, int Goals)> teamScores = new()
+{
+    {"Croatia",(0,0) },
+    {"Morocco",(0,0) },
+    {"Belgium",(0,0) },
+    {"Canada",(0,0) },
 };
 
 // Data validation
@@ -121,11 +129,22 @@ void OutputPlayersArray((string Name, string Position, int Rating)[] players)
     Console.WriteLine($"| {"Ime i prezime",-21}| {"Pozicija",-9}| {"Rating",-7}|");
     foreach (var player in players)
     {
-        Console.WriteLine(@$"| {player.Name,-21}| {player.Position,-9}| {player.Rating,-7}|");
+        Console.WriteLine($"| {player.Name,-21}| {player.Position,-9}| {player.Rating,-7}|");
     }
 }
 
 // Data manipulation & generation
+void SyncFW()
+{
+    foreach (var player in players)
+        if (player.Value.Position == "FW")
+        {
+            if (!fwGoals.ContainsKey(player.Key))
+            {
+                fwGoals.Add(player.Key, 0);
+            }
+        }
+}
 (string Name, string Position, int Rating)[] PlayersToArray()
 {
     List<(string Name, string Position, int Rating)> export = new();
@@ -191,13 +210,31 @@ int RandomScore()
     double randNormal = mean + stdDeviation * randStdNormal;
     return (int)Math.Round(Math.Abs(randNormal));
 }
-(string Team1, string Team2, int Score1, int Score2, bool isOver) GenerateMatchData(
+(string Team1, string Team2, int Score1, int Score2, bool isOver) GenerateAndUpdateMatchData(
     string team1,
     string team2)
 {
     (string Team1, string Team2, int Score1, int Score2, bool isOver) output = (team1, team2, 0, 0, true);
     output.Score1 = RandomScore();
     output.Score2 = RandomScore();
+
+    teamScores[team1] = (teamScores[team1].Points, teamScores[team1].Goals + output.Score1);
+    teamScores[team2] = (teamScores[team2].Points, teamScores[team2].Goals + output.Score2);
+
+    if (output.Score1 > output.Score2)
+    {
+        teamScores[team1]=(teamScores[team1].Points+3, teamScores[team1].Goals);
+    }
+    else if(output.Score1 < output.Score2)
+    {
+        teamScores[team2]=(teamScores[team2].Points+3, teamScores[team2].Goals);
+    }
+    else
+    {
+        teamScores[team1]=(teamScores[team1].Points+1, teamScores[team1].Goals);
+        teamScores[team2]=(teamScores[team2].Points+1, teamScores[team2].Goals);
+    }
+
     return output;
 }
 (string Name, string Position, int Rating)[] AdjustRating(
@@ -219,6 +256,7 @@ int RandomScore()
                 Random r = new();
                 if (r.NextDouble() > 0.5)
                 {
+                    fwGoals[lineup[i].Name]++;
                     lineup[i].Rating = SanitizePlayerRating(lineup[i].Rating + (int)(lineup[i].Rating * 0.05));
                     assignedGoals++;
                 }
@@ -247,7 +285,7 @@ Dictionary<string, (string Position, int Rating)> LineupToDict(
     Dictionary<string, (string Position, int Rating)> modifiedPlayers = new(players);
     foreach (var player in lineup)
     {
-        modifiedPlayers[player.Name] = (player.Position,player.Rating);
+        modifiedPlayers[player.Name] = (player.Position, player.Rating);
     }
     return modifiedPlayers;
 }
@@ -344,38 +382,81 @@ void StatisticsMenu()
             break;
 
         case 5:
-            Console.Clear();
-            var playersSorted = PlayersSorted();
-            int groupRating = 100;
-            foreach(var player in playersSorted)
             {
-                if(player.Rating < groupRating)
+                Console.Clear();
+                var playersSorted = PlayersSorted();
+                int groupRating = 100;
+                foreach (var player in playersSorted)
                 {
-                    groupRating = player.Rating;
-                    Console.WriteLine($"{groupRating}:");
+                    if (player.Rating < groupRating)
+                    {
+                        groupRating = player.Rating;
+                        Console.WriteLine($"{groupRating}:");
+                    }
+                    Console.WriteLine($" >>>{player.Name}");
                 }
-                Console.WriteLine($" >>>{player.Name}");
+                WaitForUser();
             }
-            WaitForUser();
             break;
 
         case 6:
-            Console.Clear();
-            var playersArray = PlayersToArray();
-            foreach(string position in validPositions)
             {
-                Console.WriteLine($"{position}:");
-                foreach (var player in playersArray)
+                Console.Clear();
+                var playersArray = PlayersToArray();
+                foreach (string position in validPositions)
                 {
-                    if(player.Position == position)
-                        Console.WriteLine($" >>>{player.Name}");
+                    Console.WriteLine($"{position}:");
+                    foreach (var player in playersArray)
+                    {
+                        if (player.Position == position)
+                            Console.WriteLine($" >>>{player.Name}");
+                    }
                 }
+                WaitForUser();
             }
-            WaitForUser();
             break;
 
         case 7:
+            {
+                OutputPlayersArray(SelectLineup());
+                WaitForUser();
+            }
+            break;
 
+        case 8:
+            {
+                Console.Clear();
+                Console.WriteLine($"| {"Ime i prezime",-21}| {"Broj golova",-12}|");
+                foreach(var fw in fwGoals)
+                    Console.WriteLine($"| {fw.Key,-21}| {fw.Value,-12}|");
+                WaitForUser();
+            }
+            break;
+        case 9:
+            {
+                Console.Clear();
+                Console.WriteLine("Ispis rezultata Hrvatske:");
+                foreach(var match in matchesGroupF)
+                    if((match.Team1 == "Croatia" || match.Team2 == "Croatia") && match.isOver)
+                        Console.WriteLine($"{match.Team1} {match.Score1}:{match.Score2} {match.Team2}");
+                WaitForUser();
+            }
+            break;
+
+        case 10:
+            {
+                Console.Clear();
+                Console.WriteLine($"| {"Ekipa",-10}| {"Bodovi",-7}|");
+                foreach (var team in teamScores)
+                    Console.WriteLine($"| {team.Key,-10}| {team.Value,-7}|");
+                WaitForUser();
+            }
+            break;
+
+        case 11:
+            {
+            
+            }
             break;
 
         default:
@@ -419,12 +500,12 @@ void Match()
     {
         if ((matchesGroupF[i].Team1 == "Croatia" || matchesGroupF[i].Team2 == "Croatia") && !matchesGroupF[i].isOver)
         {
-            match = GenerateMatchData(matchesGroupF[i].Team1, matchesGroupF[i].Team2);
+            match = GenerateAndUpdateMatchData(matchesGroupF[i].Team1, matchesGroupF[i].Team2);
             break;
         }
         else if (!matchesGroupF[i].isOver)
         {
-            matchesGroupF[i] = GenerateMatchData(matchesGroupF[i].Team1, matchesGroupF[i].Team2);
+            matchesGroupF[i] = GenerateAndUpdateMatchData(matchesGroupF[i].Team1, matchesGroupF[i].Team2);
             OutputPlayedMatches();
             WaitForUser();
             return;
@@ -453,10 +534,10 @@ void Match()
         else
             hasWon = -1;
         lineup = AdjustRating(hasWon, lineup, match.Score2);
-        players = LineupToDict(lineup,players);
+        players = LineupToDict(lineup, players);
     }
 
-    if(i < matchesGroupF.Length)
+    if (i < matchesGroupF.Length)
     {
         matchesGroupF[i] = match;
     }
@@ -471,4 +552,5 @@ void Match()
 }
 
 // App
+SyncFW();
 MainMenu();
