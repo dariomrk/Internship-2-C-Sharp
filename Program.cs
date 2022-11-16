@@ -136,7 +136,10 @@ void OutputPlayedMatches()
     players.Sort((e1, e2) => e2.Rating.CompareTo(e1.Rating));
     return players.ToArray();
 }
-(string Name, string Position, int Rating)[] SelectPlayersByPosition((string Name, string Position, int Rating)[] players, string position, int count = 0)
+(string Name, string Position, int Rating)[] SelectPlayersByPosition(
+    (string Name, string Position, int Rating)[] players,
+    string position,
+    int count = 0)
 {
     if (count == 0)
         count = players.Length;
@@ -182,14 +185,19 @@ int RandomScore()
     double randNormal = mean + stdDeviation * randStdNormal;
     return (int)Math.Round(Math.Abs(randNormal));
 }
-(string Team1, string Team2, int Score1, int Score2, bool isOver) GenerateMatchData(string team1, string team2)
+(string Team1, string Team2, int Score1, int Score2, bool isOver) GenerateMatchData(
+    string team1,
+    string team2)
 {
     (string Team1, string Team2, int Score1, int Score2, bool isOver) output = (team1, team2, 0, 0, true);
     output.Score1 = RandomScore();
     output.Score2 = RandomScore();
     return output;
 }
-(string Name, string Position, int Rating)[] AdjustRating(int hasWon, (string Name, string Position, int Rating)[] lineup, int numOfGoals)
+(string Name, string Position, int Rating)[] AdjustRating(
+    int hasWon,
+    (string Name, string Position, int Rating)[] lineup,
+    int numOfGoals)
 {
     int assignedGoals = 0;
 
@@ -225,6 +233,17 @@ int RandomScore()
     }
 
     return lineup;
+}
+Dictionary<string, (string Position, int Rating)> LineupToDict(
+    (string Name, string Position, int Rating)[] lineup,
+    Dictionary<string, (string Position, int Rating)> players)
+{
+    Dictionary<string, (string Position, int Rating)> modifiedPlayers = new(players);
+    foreach (var player in lineup)
+    {
+        modifiedPlayers[player.Name] = (player.Position,player.Rating);
+    }
+    return modifiedPlayers;
 }
 
 // Menus
@@ -325,7 +344,7 @@ void Match()
         else
             hasWon = -1;
         lineup = AdjustRating(hasWon, lineup, match.Score1);
-        Console.WriteLine($"{match.Team1} {match.Score1}:{match.Score2} {match.Team2}");
+        players = LineupToDict(lineup, players);
     }
     else
     {
@@ -337,6 +356,7 @@ void Match()
         else
             hasWon = -1;
         lineup = AdjustRating(hasWon, lineup, match.Score2);
+        players = LineupToDict(lineup,players);
     }
 
     if(i < matchesGroupF.Length)
