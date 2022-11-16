@@ -123,6 +123,31 @@ int Menu(string[] options)
     players.Sort((e1, e2) => e2.Rating.CompareTo(e1.Rating));
     return players.ToArray();
 }
+(string Name, string Position, int Rating)[] SelectPlayersByPosition((string Name, string Position, int Rating)[] players, string position, int count = 0)
+{
+    if(count == 0)
+        count = players.Length;
+
+    List<(string Name, string Position, int Rating)> selected = new();
+
+    for(int i = 0; i < count; i++)
+    {
+        if (players[i].Position == position)
+            selected.Add(players[i]);
+    }
+    return selected.ToArray();
+}
+(string Name, string Position, int Rating)[] SelectLineup()
+{
+    List<(string Name, string Position, int Rating)> selected = new();
+
+    selected.AddRange(SelectPlayersByPosition(PlayersSorted(), "GK", 1));
+    selected.AddRange(SelectPlayersByPosition(PlayersSorted(), "DF", 4));
+    selected.AddRange(SelectPlayersByPosition(PlayersSorted(), "MF", 3));
+    selected.AddRange(SelectPlayersByPosition(PlayersSorted(), "FW", 3));
+
+    return selected.ToArray();
+}
 
 // Menus
 void MainMenu()
