@@ -53,11 +53,17 @@ void ValidatePlayerRating(int rating)
 }
 
 // Input & Output utilities
-void BadUserInputWarning()
+void WaitForUser()
 {
-    Console.WriteLine("Unesena opcija nije validna!\nPritisnite bilo koju tipku za ponovni pokusaj.");
+    Console.WriteLine("Pritisnite bilo koju tipku za nastavak...");
     Console.ReadKey();
 }
+void BadUserInputWarning()
+{
+    Console.WriteLine("Unesena opcija nije validna!");
+    WaitForUser();
+}
+
 int Menu(string[] options)
 {
     while (true)
@@ -104,6 +110,7 @@ void MainMenu()
                 return;
             case 1:
                 // Odradi trening
+                Training();
                 break;
             case 2:
                 // Odigraj utakmicu
@@ -118,6 +125,25 @@ void MainMenu()
                 break;
         }
     }
+}
+
+// Functionality
+void Training()
+{
+    Console.Clear();
+    Console.WriteLine($"| {"Ime i prezime".PadRight(21)}| {"Prethodni rating".PadRight(17)}| {"Novi rating".PadRight(13)}| {"Razlika".PadRight(9)}|");
+    for (int i= 0; i < players.Count; i++)
+    {
+        var name = players.Keys.ElementAt(i);
+        int oldRating = players[name].Rating;
+
+        Random r = new Random();
+        int diff = (int)(r.Next(-5, 6) * 0.01 * oldRating);
+        players[name] = (players[name].Position,diff + oldRating);
+
+        Console.WriteLine(@$"| {name.PadRight(21)}| {oldRating.ToString().PadRight(17)}| {players[name].Rating.ToString().PadRight(13)}| {diff.ToString().PadRight(9)}|");
+    }
+    WaitForUser();
 }
 
 // App
