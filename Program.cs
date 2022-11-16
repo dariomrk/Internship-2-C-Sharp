@@ -1,8 +1,5 @@
 ﻿
 // Vars
-using System.IO.Pipes;
-using System.Reflection.PortableExecutable;
-
 Dictionary<string, (string Position, int Rating)> players = new()
 {
     {"Luka Modrić",("MF",88)},
