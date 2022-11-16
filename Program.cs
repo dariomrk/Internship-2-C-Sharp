@@ -23,6 +23,7 @@ Dictionary<string, (string Position, int Rating)> players = new()
     {"Domagoj Vida",("DF", 76)},
     {"Ante Budimir",("FW", 76)},
 };
+string[] validPositions = new string[] { "GK", "DF", "MF", "FW" };
 int currentMatch = 0;
 (string Team1, string Team2, int Score1, int Score2, bool isOver)[] matchesGroupF =
 {
@@ -50,7 +51,7 @@ void ValidatePlayerPosition(string position)
         throw new Exception("Position cannot be null!");
     if (position.Trim() == "")
         throw new Exception("Position cannot be empty!");
-    if (!((new string[] { "GK", "DF", "MF", "FW" }).Contains(position)))
+    if (!(validPositions.Contains(position)))
         throw new Exception("Position is not valid!");
 }
 void ValidatePlayerRating(int rating)
@@ -104,7 +105,6 @@ int OutputMenu(string[] options)
         return userInput;
     }
 }
-
 void OutputPlayedMatches()
 {
     Console.Clear();
@@ -114,6 +114,15 @@ void OutputPlayedMatches()
         {
             Console.WriteLine($"{match.Team1} {match.Score1} : {match.Score2} {match.Team2}");
         }
+}
+void OutputPlayersArray((string Name, string Position, int Rating)[] players)
+{
+    Console.Clear();
+    Console.WriteLine($"| {"Ime i prezime",-21}| {"Pozicija",-9}| {"Rating",-7}|");
+    foreach (var player in players)
+    {
+        Console.WriteLine(@$"| {player.Name,-21}| {player.Position,-9}| {player.Rating,-7}|");
+    }
 }
 
 // Data manipulation & generation
@@ -263,23 +272,114 @@ void MainMenu()
         {
             case 0:
                 return;
+
             case 1:
                 // Odradi trening
                 Training();
                 break;
+
             case 2:
                 // Odigraj utakmicu
                 Match();
                 break;
+
             case 3:
                 //Statistika
+                StatisticsMenu();
                 break;
+
             case 4:
                 // Kontrola igraca
                 break;
+
             default:
                 break;
         }
+    }
+}
+void StatisticsMenu()
+{
+    string[] statisticsMenuOptions =
+    {
+        "Povratak na glavni meni",
+        "Ispis igraca",
+        "Ispis po ratingu uzlazno",
+        "Ispis po ratingu silazno",
+        "Ispis igraca po imenu i prezimenu uzlazno",
+        "Ispis igraca po ratingu",
+        "Ispos igraca po poziciji",
+        "Ispis postave",
+        "Ispis strijelaca",
+        "Rezultati po ekipi",
+        "Ispis tablice grupe",
+    };
+
+    int userSelection = OutputMenu(statisticsMenuOptions);
+
+    switch (userSelection)
+    {
+        case 0:
+            return;
+
+        case 1:
+            OutputPlayersArray(PlayersToArray());
+            WaitForUser();
+            break;
+
+        case 2:
+            OutputPlayersArray(PlayersSorted());
+            WaitForUser();
+            break;
+
+        case 3:
+            OutputPlayersArray(PlayersToArray().Reverse().ToArray());
+            WaitForUser();
+            break;
+
+        case 4:
+            List<(string Name, string Position, int Rating)> playersList = new(PlayersToArray());
+            playersList.Sort((e1, e2) => e1.Name.CompareTo(e2.Name));
+            OutputPlayersArray(playersList.ToArray());
+            WaitForUser();
+            break;
+
+        case 5:
+            Console.Clear();
+            var playersSorted = PlayersSorted();
+            int groupRating = 100;
+            foreach(var player in playersSorted)
+            {
+                if(player.Rating < groupRating)
+                {
+                    groupRating = player.Rating;
+                    Console.WriteLine($"{groupRating}:");
+                }
+                Console.WriteLine($" >>>{player.Name}");
+            }
+            WaitForUser();
+            break;
+
+        case 6:
+            Console.Clear();
+            var playersArray = PlayersToArray();
+            foreach(string position in validPositions)
+            {
+                Console.WriteLine($"{position}:");
+                foreach (var player in playersArray)
+                {
+                    if(player.Position == position)
+                        Console.WriteLine($" >>>{player.Name}");
+                }
+            }
+            WaitForUser();
+            break;
+
+        case 7:
+
+            break;
+
+        default:
+            break;
     }
 }
 
@@ -287,7 +387,7 @@ void MainMenu()
 void Training()
 {
     Console.Clear();
-    Console.WriteLine($"| {"Ime i prezime",-21}| {"Prethodni rating",-17}| {"Novi rating",-13}| {"Razlika",-9}|");
+    Console.WriteLine($"| {"Ime i prezime",-21}| {"Prethodni rating",-17}| {"Novi rating",-12}| {"Razlika",-8}|");
     for (int i = 0; i < players.Count; i++)
     {
         var name = players.Keys.ElementAt(i);
@@ -297,7 +397,7 @@ void Training()
         int diff = (int)(r.Next(-5, 6) * 0.01 * oldRating);
         players[name] = (players[name].Position, SanitizePlayerRating(diff + oldRating));
 
-        Console.WriteLine(@$"| {name,-21}| {oldRating,-17}| {players[name].Rating,-13}| {diff,-9}|");
+        Console.WriteLine(@$"| {name,-21}| {oldRating,-17}| {players[name].Rating,-12}| {diff,-8}|");
     }
     WaitForUser();
 }
