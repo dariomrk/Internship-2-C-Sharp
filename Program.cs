@@ -1,6 +1,5 @@
 ﻿
 // Vars
-string[] allowedPositions = { "GK", "DF", "MF", "FW" }; // who needs an enum anyway?
 Dictionary<string, (string Position, int Rating)> players = new()
 {
     {"Luka Modrić",("MF",88)},
@@ -41,7 +40,7 @@ void ValidatePlayerPosition(string position)
         throw new Exception("Position cannot be null!");
     if (position.Trim() == "")
         throw new Exception("Position cannot be empty!");
-    if (!(allowedPositions.Contains(position)))
+    if (!((new string[] { "GK", "DF", "MF", "FW" }).Contains(position)))
         throw new Exception("Position is not valid!");
 }
 void ValidatePlayerRating(int rating)
@@ -50,6 +49,16 @@ void ValidatePlayerRating(int rating)
         throw new Exception("Rating cannot exceed 100!");
     if (rating < 0)
         throw new Exception("Rating subceed 0!");
+}
+
+// Data sanitization
+int SanitizePlayerRating(int rating)
+{
+    if(rating > 100)
+        return 100;
+    if (rating < 0)
+        return 0;
+    return rating;
 }
 
 // Input & Output utilities
@@ -73,8 +82,7 @@ int Menu(string[] options)
             Console.WriteLine($"{i} - {options[i]}");
 
         Console.Write("Unesite odabranu opciju: ");
-        int userInput;
-        if (!int.TryParse(Console.ReadLine(), out userInput))
+        if (!int.TryParse(Console.ReadLine(), out int userInput))
         {
             BadUserInputWarning();
             continue;
@@ -131,17 +139,17 @@ void MainMenu()
 void Training()
 {
     Console.Clear();
-    Console.WriteLine($"| {"Ime i prezime".PadRight(21)}| {"Prethodni rating".PadRight(17)}| {"Novi rating".PadRight(13)}| {"Razlika".PadRight(9)}|");
+    Console.WriteLine($"| {"Ime i prezime",-21}| {"Prethodni rating",-17}| {"Novi rating",-13}| {"Razlika",-9}|");
     for (int i= 0; i < players.Count; i++)
     {
         var name = players.Keys.ElementAt(i);
         int oldRating = players[name].Rating;
 
-        Random r = new Random();
+        Random r = new();
         int diff = (int)(r.Next(-5, 6) * 0.01 * oldRating);
         players[name] = (players[name].Position,diff + oldRating);
 
-        Console.WriteLine(@$"| {name.PadRight(21)}| {oldRating.ToString().PadRight(17)}| {players[name].Rating.ToString().PadRight(13)}| {diff.ToString().PadRight(9)}|");
+        Console.WriteLine(@$"| {name,-21}| {oldRating,-17}| {players[name].Rating,-13}| {diff,-9}|");
     }
     WaitForUser();
 }
