@@ -35,12 +35,12 @@ int currentMatch = 0;
     ("Croatia","Belgium",0,0,false),
     ("Canada","Morocco",0,0,false),
 };
-Dictionary<string, (int Points, int Goals)> teamScores = new()
+Dictionary<string, (int Points, int Goals, int GoalDiff)> teamScores = new()
 {
-    {"Croatia",(0,0) },
-    {"Morocco",(0,0) },
-    {"Belgium",(0,0) },
-    {"Canada",(0,0) },
+    {"Croatia",(0,0,0) },
+    {"Morocco",(0,0,0) },
+    {"Belgium",(0,0,0) },
+    {"Canada",(0,0,0) },
 };
 
 // Data validation
@@ -97,7 +97,7 @@ int OutputMenu(string[] options)
     {
         Console.Clear();
         for (int i = 0; i<options.Length; i++)
-            Console.WriteLine($"{i} - {options[i]}");
+            Console.WriteLine($"{i,-2} -  {options[i]}");
 
         Console.Write("Unesite odabranu opciju: ");
         if (!int.TryParse(Console.ReadLine(), out int userInput))
@@ -218,21 +218,21 @@ int RandomScore()
     output.Score1 = RandomScore();
     output.Score2 = RandomScore();
 
-    teamScores[team1] = (teamScores[team1].Points, teamScores[team1].Goals + output.Score1);
-    teamScores[team2] = (teamScores[team2].Points, teamScores[team2].Goals + output.Score2);
+    teamScores[team1] = (teamScores[team1].Points, teamScores[team1].Goals + output.Score1, teamScores[team1].Goals + output.Score1 - output.Score2);
+    teamScores[team2] = (teamScores[team2].Points, teamScores[team2].Goals + output.Score2, teamScores[team2].Goals + output.Score2 - output.Score1);
 
     if (output.Score1 > output.Score2)
     {
-        teamScores[team1]=(teamScores[team1].Points+3, teamScores[team1].Goals);
+        teamScores[team1]=(teamScores[team1].Points+3, teamScores[team1].Goals, teamScores[team1].GoalDiff);
     }
     else if(output.Score1 < output.Score2)
     {
-        teamScores[team2]=(teamScores[team2].Points+3, teamScores[team2].Goals);
+        teamScores[team2]=(teamScores[team2].Points+3, teamScores[team2].Goals, teamScores[team2].GoalDiff);
     }
     else
     {
-        teamScores[team1]=(teamScores[team1].Points+1, teamScores[team1].Goals);
-        teamScores[team2]=(teamScores[team2].Points+1, teamScores[team2].Goals);
+        teamScores[team1]=(teamScores[team1].Points+1, teamScores[team1].Goals, teamScores[team1].GoalDiff);
+        teamScores[team2]=(teamScores[team2].Points+1, teamScores[team2].Goals, teamScores[team2].GoalDiff);
     }
 
     return output;
@@ -348,7 +348,8 @@ void StatisticsMenu()
         "Ispos igraca po poziciji",
         "Ispis postave",
         "Ispis strijelaca",
-        "Rezultati po ekipi",
+        "Rezultati ekipe",
+        "Bodovi svih ekipa",
         "Ispis tablice grupe",
     };
 
@@ -448,14 +449,34 @@ void StatisticsMenu()
                 Console.Clear();
                 Console.WriteLine($"| {"Ekipa",-10}| {"Bodovi",-7}|");
                 foreach (var team in teamScores)
-                    Console.WriteLine($"| {team.Key,-10}| {team.Value,-7}|");
+                    Console.WriteLine($"| {team.Key,-10}| {team.Value.Points,-7}|");
                 WaitForUser();
             }
             break;
 
         case 11:
             {
-            
+                List<(string Name, int Points, int Goals, int GoalDiff)> teamScoresList = new();
+                foreach(var team in teamScores)
+                {
+                    teamScoresList.Add((team.Key,team.Value.Points,team.Value.Goals,team.Value.GoalDiff));
+                }
+                teamScoresList.Sort((e1, e2) => 
+                {
+                    if(e1.Points != e2.Points)
+                        return e2.Points.CompareTo(e1.Points);
+                    return e2.Name.CompareTo(e1.Name);
+                }
+                );
+
+                Console.Clear();
+                Console.WriteLine($"| {"Rank",-5}| {"Ekipa",-10}| {"Bodovi",-7}| {"Gol razlika",-12}|");
+                for (int i = 0; i < teamScoresList.Count; i++)
+                {
+                    (string Name, int Points, int Goals, int GoalDiff) team = teamScoresList[i];
+                    Console.WriteLine($"| {$"{i+1}.",-5}| {team.Name,-10}| {team.Points,-7}| {team.GoalDiff,-12}|");
+                }
+                WaitForUser();
             }
             break;
 
