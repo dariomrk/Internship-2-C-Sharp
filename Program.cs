@@ -128,12 +128,19 @@ int Menu(string[] options)
     if(count == 0)
         count = players.Length;
 
+    int currentCount = 0;
+
     List<(string Name, string Position, int Rating)> selected = new();
 
-    for(int i = 0; i < count; i++)
+    for(int i = 0; i < players.Length; i++)
     {
+        if(currentCount == count)
+            break;
         if (players[i].Position == position)
+        {
             selected.Add(players[i]);
+            currentCount++;
+        }
     }
     return selected.ToArray();
 }
@@ -211,7 +218,7 @@ void Training()
 void Match()
 {
     Console.Clear();
-
+    
     WaitForUser();
 }
 
