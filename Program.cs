@@ -1,5 +1,8 @@
 ﻿
 // Vars
+using System.IO.Pipes;
+using System.Reflection.PortableExecutable;
+
 Dictionary<string, (string Position, int Rating)> players = new()
 {
     {"Luka Modrić",("MF",88)},
@@ -106,7 +109,7 @@ int Menu(string[] options)
     }
 }
 
-// Data manipulation
+// Data manipulation & generation
 (string Name, string Position, int Rating)[] PlayersToArray()
 {
     List<(string Name, string Position, int Rating)> export = new();
@@ -125,16 +128,16 @@ int Menu(string[] options)
 }
 (string Name, string Position, int Rating)[] SelectPlayersByPosition((string Name, string Position, int Rating)[] players, string position, int count = 0)
 {
-    if(count == 0)
+    if (count == 0)
         count = players.Length;
 
     int currentCount = 0;
 
     List<(string Name, string Position, int Rating)> selected = new();
 
-    for(int i = 0; i < players.Length; i++)
+    for (int i = 0; i < players.Length; i++)
     {
-        if(currentCount == count)
+        if (currentCount == count)
             break;
         if (players[i].Position == position)
         {
@@ -154,6 +157,70 @@ int Menu(string[] options)
     selected.AddRange(SelectPlayersByPosition(PlayersSorted(), "FW", 3));
 
     return selected.ToArray();
+}
+int RandomScore()
+{
+    // Statistic information: https://docs.bvsalud.org/biblioref/2018/12/965586/goal-scoring-frequency-in-soccer-in-different-age-groups.pdf
+    // Box-Muller transform: https://en.wikipedia.org/wiki/Box%E2%80%93Muller_transform
+    // Score is generated using the statistics information from the referenced document and the Box-Muller transform.
+    double mean = 2.43;
+    double stdDeviation = 1.41;
+    Random rand = new();
+    double u1 = 1.0 - rand.NextDouble();
+    double u2 = 1.0 - rand.NextDouble();
+    double randStdNormal = Math.Sqrt(-2.0 * Math.Log(u1)) * Math.Sin(2.0 * Math.PI * u2);
+    double randNormal = mean + stdDeviation * randStdNormal;
+    return (int)Math.Round(Math.Abs(randNormal));
+}
+(string Team1, string Team2, int Score1, int Score2, bool isOver) GenerateMatchData(string team1, string team2)
+{
+    (string Team1, string Team2, int Score1, int Score2, bool isOver) output = (team1, team2, 0, 0, true);
+    output.Score1 = RandomScore();
+    output.Score2 = RandomScore();
+    return output;
+}
+(string Name, string Position, int Rating)[] AdjustRating(int hasWon, (string Name, string Position, int Rating)[] lineup)
+{
+    for (int i = 0; i < lineup.Length; i++)
+    {
+        if (hasWon == 1)
+        {
+            switch (lineup[i].Position)
+            {
+                case "GK":
+                    lineup[i].Rating = SanitizePlayerRating(lineup[i].Rating + (int)(lineup[i].Rating * 0.02));
+                    break;
+                case "DF":
+                    lineup[i].Rating = SanitizePlayerRating(lineup[i].Rating + (int)(lineup[i].Rating * 0.02));
+                    break;
+                case "MF":
+                    lineup[i].Rating = SanitizePlayerRating(lineup[i].Rating + (int)(lineup[i].Rating * 0.02));
+                    break;
+                case "FW":
+                    lineup[i].Rating = SanitizePlayerRating(lineup[i].Rating + (int)(lineup[i].Rating * 0.05));
+                    break;
+            }
+        }
+        else if(hasWon == -1)
+        {
+            switch (lineup[i].Position)
+            {
+                case "GK":
+                    lineup[i].Rating = SanitizePlayerRating(lineup[i].Rating - (int)(lineup[i].Rating * 0.02));
+                    break;
+                case "DF":
+                    lineup[i].Rating = SanitizePlayerRating(lineup[i].Rating - (int)(lineup[i].Rating * 0.02));
+                    break;
+                case "MF":
+                    lineup[i].Rating = SanitizePlayerRating(lineup[i].Rating - (int)(lineup[i].Rating * 0.02));
+                    break;
+                case "FW":
+                    lineup[i].Rating = SanitizePlayerRating(lineup[i].Rating + (int)(lineup[i].Rating * 0.05));
+                    break;
+            }
+        }
+    }
+    return lineup;
 }
 
 // Menus
@@ -214,11 +281,62 @@ void Training()
     }
     WaitForUser();
 }
-
 void Match()
 {
     Console.Clear();
-    
+    var lineup = SelectLineup();
+    if (lineup.Length < 11)
+    {
+        Console.WriteLine("Nedovoljan broj igraca! Nije moguce odigrati utakmicu!");
+        WaitForUser();
+        return;
+    }
+
+    (string Team1, string Team2, int Score1, int Score2, bool isOver) match = ("","",0,0,false);
+
+    for (int i = 0; i < matchesGroupF.Length; i++)
+    {
+        if ((matchesGroupF[i].Team1 == "Croatia" || matchesGroupF[i].Team2 == "Croatia") && !matchesGroupF[i].isOver)
+        {
+            match = GenerateMatchData(matchesGroupF[i].Team1, matchesGroupF[i].Team2);
+            break;
+        }
+        else if (!matchesGroupF[i].isOver)
+        {
+            matchesGroupF[i] = GenerateMatchData(matchesGroupF[i].Team1, matchesGroupF[i].Team2);
+        }
+    }
+
+    if (match.Team1 == "Croatia")
+    {
+        int hasWon = 0;
+        if (match.Score1 > match.Score2)
+            hasWon = 1;
+        else if (match.Score1 == match.Score2)
+            hasWon = 0;
+        else
+            hasWon = -1;
+        lineup = AdjustRating(hasWon, lineup);
+        Console.WriteLine($"{match.Team1} {match.Score1}:{match.Score2} {match.Team2}");
+    }
+    else
+    {
+        int hasWon = 0;
+        if (match.Score1 < match.Score2)
+            hasWon = 1;
+        else if (match.Score1 == match.Score2)
+            hasWon = 0;
+        else
+            hasWon = -1;
+        lineup = AdjustRating(hasWon, lineup);
+        Console.WriteLine($"{match.Team2} {match.Score2}:{match.Score1} {match.Team1}");
+    }
+
+    foreach (var player in lineup)
+    {
+        Console.WriteLine(player.Name + " " + player.Rating);
+    }
+
     WaitForUser();
 }
 
