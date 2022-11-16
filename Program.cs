@@ -29,11 +29,11 @@ Dictionary<string, (string Position, int Rating)> players = new()
 int currentMatch = 0;
 (string Team1, string Team2, int Score1, int Score2, bool isOver)[] matchesGroupF =
 {
-    ("Morocco","Croatia",0,0,false), // Match 1
+    ("Morocco","Croatia",0,0,false),
     ("Belgium","Canada",0,0,false),
     ("Belgium","Morocco",0,0,false),
-    ("Croatia","Canada",0,0,false), // Match 2
-    ("Croatia","Belgium",0,0,false), // Match 3
+    ("Croatia","Canada",0,0,false),
+    ("Croatia","Belgium",0,0,false),
     ("Canada","Morocco",0,0,false),
 };
 
@@ -85,8 +85,7 @@ void BadUserInputWarning()
     Console.WriteLine("Unesena opcija nije validna!");
     WaitForUser();
 }
-
-int Menu(string[] options)
+int OutputMenu(string[] options)
 {
     while (true)
     {
@@ -107,6 +106,17 @@ int Menu(string[] options)
         }
         return userInput;
     }
+}
+
+void OutputPlayedMatches()
+{
+    Console.Clear();
+    Console.WriteLine("Odigrane utakmice:");
+    foreach (var match in matchesGroupF)
+        if (match.isOver)
+        {
+            Console.WriteLine($"{match.Team1} {match.Score1} : {match.Score2} {match.Team2}");
+        }
 }
 
 // Data manipulation & generation
@@ -179,47 +189,41 @@ int RandomScore()
     output.Score2 = RandomScore();
     return output;
 }
-(string Name, string Position, int Rating)[] AdjustRating(int hasWon, (string Name, string Position, int Rating)[] lineup)
+(string Name, string Position, int Rating)[] AdjustRating(int hasWon, (string Name, string Position, int Rating)[] lineup, int numOfGoals)
 {
+    int assignedGoals = 0;
+
+    while (assignedGoals < numOfGoals)
+    {
+        for (int i = 0; i < lineup.Length; i++)
+        {
+            if (assignedGoals == numOfGoals)
+                break;
+
+            if (lineup[i].Position == "FW")
+            {
+                Random r = new();
+                if (r.NextDouble() > 0.5)
+                {
+                    lineup[i].Rating = SanitizePlayerRating(lineup[i].Rating + (int)(lineup[i].Rating * 0.05));
+                    assignedGoals++;
+                }
+            }
+        }
+    }
+
     for (int i = 0; i < lineup.Length; i++)
     {
         if (hasWon == 1)
         {
-            switch (lineup[i].Position)
-            {
-                case "GK":
-                    lineup[i].Rating = SanitizePlayerRating(lineup[i].Rating + (int)(lineup[i].Rating * 0.02));
-                    break;
-                case "DF":
-                    lineup[i].Rating = SanitizePlayerRating(lineup[i].Rating + (int)(lineup[i].Rating * 0.02));
-                    break;
-                case "MF":
-                    lineup[i].Rating = SanitizePlayerRating(lineup[i].Rating + (int)(lineup[i].Rating * 0.02));
-                    break;
-                case "FW":
-                    lineup[i].Rating = SanitizePlayerRating(lineup[i].Rating + (int)(lineup[i].Rating * 0.05));
-                    break;
-            }
+            lineup[i].Rating = SanitizePlayerRating(lineup[i].Rating + (int)(lineup[i].Rating * 0.02));
         }
-        else if(hasWon == -1)
+        else if (hasWon == -1)
         {
-            switch (lineup[i].Position)
-            {
-                case "GK":
-                    lineup[i].Rating = SanitizePlayerRating(lineup[i].Rating - (int)(lineup[i].Rating * 0.02));
-                    break;
-                case "DF":
-                    lineup[i].Rating = SanitizePlayerRating(lineup[i].Rating - (int)(lineup[i].Rating * 0.02));
-                    break;
-                case "MF":
-                    lineup[i].Rating = SanitizePlayerRating(lineup[i].Rating - (int)(lineup[i].Rating * 0.02));
-                    break;
-                case "FW":
-                    lineup[i].Rating = SanitizePlayerRating(lineup[i].Rating + (int)(lineup[i].Rating * 0.05));
-                    break;
-            }
+            lineup[i].Rating = SanitizePlayerRating(lineup[i].Rating - (int)(lineup[i].Rating * 0.02));
         }
     }
+
     return lineup;
 }
 
@@ -237,7 +241,7 @@ void MainMenu()
 
     while (true)
     {
-        int userSelection = Menu(mainMenuOptions);
+        int userSelection = OutputMenu(mainMenuOptions);
 
         switch (userSelection)
         {
@@ -292,9 +296,10 @@ void Match()
         return;
     }
 
-    (string Team1, string Team2, int Score1, int Score2, bool isOver) match = ("","",0,0,false);
+    (string Team1, string Team2, int Score1, int Score2, bool isOver) match = ("", "", 0, 0, false);
 
-    for (int i = 0; i < matchesGroupF.Length; i++)
+    int i;
+    for (i = 0; i < matchesGroupF.Length; i++)
     {
         if ((matchesGroupF[i].Team1 == "Croatia" || matchesGroupF[i].Team2 == "Croatia") && !matchesGroupF[i].isOver)
         {
@@ -304,6 +309,9 @@ void Match()
         else if (!matchesGroupF[i].isOver)
         {
             matchesGroupF[i] = GenerateMatchData(matchesGroupF[i].Team1, matchesGroupF[i].Team2);
+            OutputPlayedMatches();
+            WaitForUser();
+            return;
         }
     }
 
@@ -316,7 +324,7 @@ void Match()
             hasWon = 0;
         else
             hasWon = -1;
-        lineup = AdjustRating(hasWon, lineup);
+        lineup = AdjustRating(hasWon, lineup, match.Score1);
         Console.WriteLine($"{match.Team1} {match.Score1}:{match.Score2} {match.Team2}");
     }
     else
@@ -328,15 +336,20 @@ void Match()
             hasWon = 0;
         else
             hasWon = -1;
-        lineup = AdjustRating(hasWon, lineup);
-        Console.WriteLine($"{match.Team2} {match.Score2}:{match.Score1} {match.Team1}");
+        lineup = AdjustRating(hasWon, lineup, match.Score2);
     }
 
-    foreach (var player in lineup)
+    if(i < matchesGroupF.Length)
     {
-        Console.WriteLine(player.Name + " " + player.Rating);
+        matchesGroupF[i] = match;
+    }
+    else
+    {
+        Console.WriteLine("Sve utakmice su odigrane!");
+        WaitForUser();
     }
 
+    OutputPlayedMatches();
     WaitForUser();
 }
 
