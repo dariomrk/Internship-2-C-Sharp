@@ -2,30 +2,37 @@
 // Vars
 Dictionary<string, (string Position, int Rating)> players = new()
 {
-    {"Luka Modrić",("MF",88)},
-    {"Marcelo Brozović",("DF",86)},
-    {"Mateo Kovačić",("MF",84)},
-    {"Ivan Perišić",("MF",84)},
-    {"Andrej Kramarić",("FW", 82)},
-    {"Ivan Rakitić",("MF", 82)},
-    {"Joško Gvardiol",("DF", 81)},
-    {"Mario Pašalić",("MF", 81)},
+    {"Luka Modric",("MF",88)},
+    {"Marcelo Brozovic",("DF",86)},
+    {"Mateo Kovacic",("MF",84)},
+    {"Ivan Perisic",("MF",84)},
+    {"Andrej Kramaric",("FW", 82)},
+    {"Ivan Rakitic",("MF", 82)},
+    {"Josko Gvardiol",("DF", 81)},
+    {"Mario Pasalic",("MF", 81)},
     {"Lovro Majer",("MF", 80)},
-    {"Dominik Livaković",("GK", 80)},
-    {"Ante Rebić",("FW", 80)},
+    {"Dominik Livakovic",("GK", 80)},
+    {"Ante Rebic",("FW", 80)},
     {"Josip Brekalo",("MF", 79)},
     {"Borna Sosa",("DF", 78)},
-    {"Nikola Vlašić",("MF", 78)},
-    {"Duje Ćaleta-Car",("DF", 78)},
+    {"Nikola Vlasic",("MF", 78)},
+    {"Duje Caleta-Car",("DF", 78)},
     {"Dejan Lovren",("DF", 78)},
-    {"Mislav Oršić",("FW", 77)},
+    {"Mislav Orsic",("FW", 77)},
     {"Marko Livaja",("FW", 77)},
     {"Domagoj Vida",("DF", 76)},
     {"Ante Budimir",("FW", 76)},
 };
 Dictionary<string, int> fwGoals = new();
+Dictionary<string, (int Points, int Goals, int GoalDiff)> teamScores = new()
+{
+    {"Croatia",(0,0,0) },
+    {"Morocco",(0,0,0) },
+    {"Belgium",(0,0,0) },
+    {"Canada",(0,0,0) },
+};
+
 string[] validPositions = new string[] { "GK", "DF", "MF", "FW" };
-int currentMatch = 0;
 (string Team1, string Team2, int Score1, int Score2, bool isOver)[] matchesGroupF =
 {
     ("Morocco","Croatia",0,0,false),
@@ -35,15 +42,15 @@ int currentMatch = 0;
     ("Croatia","Belgium",0,0,false),
     ("Canada","Morocco",0,0,false),
 };
-Dictionary<string, (int Points, int Goals, int GoalDiff)> teamScores = new()
-{
-    {"Croatia",(0,0,0) },
-    {"Morocco",(0,0,0) },
-    {"Belgium",(0,0,0) },
-    {"Canada",(0,0,0) },
-};
 
 // Data validation
+void ValidatePlayerName(string name)
+{
+    if (name == null)
+        throw new Exception("Name cannot be null!");
+    if (name.Trim() == "")
+        throw new Exception("Name cannot be empty!");
+}
 void ValidatePlayerPosition(string position)
 {
     if (position == null)
@@ -127,6 +134,26 @@ void ReturnToMainMenuWarning(string message)
 {
     Console.WriteLine($"{message} Povratak na glavni meni...");
     WaitForUser();
+}
+bool AskForConfirmation(string message)
+{
+    Console.Clear();
+    while (true)
+    {
+        Console.WriteLine($"{message}");
+        Console.Write($"Unesite Y za da ili N za ne: ");
+        string userInput = Console.ReadLine();
+
+        if (userInput.ToUpper() == "Y")
+            return true;
+        else if (userInput.ToUpper() == "N")
+            return false;
+        else
+        {
+            Console.Clear();
+            Console.WriteLine("Neispravan unos! Pokusajte ponovo...");
+        }
+    }
 }
 
 // Data manipulation & generation
@@ -221,7 +248,7 @@ int RandomScore()
     {
         teamScores[team1]=(teamScores[team1].Points+3, teamScores[team1].Goals, teamScores[team1].GoalDiff);
     }
-    else if(output.Score1 < output.Score2)
+    else if (output.Score1 < output.Score2)
     {
         teamScores[team2]=(teamScores[team2].Points+3, teamScores[team2].Goals, teamScores[team2].GoalDiff);
     }
@@ -427,11 +454,11 @@ void StatisticsMenu()
         "Ispis po ratingu silazno",
         "Ispis igraca po imenu i prezimenu uzlazno",
         "Ispis igraca po ratingu",
-        "Ispos igraca po poziciji",
+        "Ispis igraca po poziciji",
         "Ispis postave",
         "Ispis strijelaca",
-        "Rezultati ekipe",
-        "Bodovi svih ekipa",
+        "Rezultati Hrvatske",
+        "Rezultati svih ekipa",
         "Ispis tablice grupe",
     };
 
@@ -568,7 +595,8 @@ void StatisticsMenu()
             break;
     }
 }
-void PlayerControlMenu() {
+void PlayerControlMenu()
+{
     string[] playerControlMenuOptions =
     {
         "Povratak na glavni meni",
@@ -587,7 +615,7 @@ void PlayerControlMenu() {
             {
                 Console.Clear();
 
-                if(players.Keys.Count == 26)
+                if (players.Keys.Count == 26)
                 {
                     ReturnToMainMenuWarning("Ekipa je puna! Nije moguce dodavati nove igrace.");
                     return;
@@ -596,18 +624,22 @@ void PlayerControlMenu() {
                 Console.Write("Unesite ime i prezime novog igraca: ");
                 string newPlayerName = Console.ReadLine();
 
-                if(newPlayerName.Trim().Length == 0)
+                try
+                {
+                    ValidatePlayerName(newPlayerName);
+                }
+                catch (Exception)
                 {
                     ReturnToMainMenuWarning($"Neispravno ime!");
                     return;
                 }
 
-                if(players.ContainsKey(newPlayerName))
+                if (players.ContainsKey(newPlayerName))
                 {
                     ReturnToMainMenuWarning($"Nije moguce dodati igraca {newPlayerName} kako isti vec postoji!");
                     return;
                 }
-                (string Position, int Rating) newPlayerInfo = ("",0);
+                (string Position, int Rating) newPlayerInfo = ("", 0);
 
                 Console.Write("Unesite poziciju igraca: ");
                 string positionUserInput = Console.ReadLine();
@@ -639,9 +671,167 @@ void PlayerControlMenu() {
                 }
 
                 players.Add(newPlayerName, newPlayerInfo);
-                ReturnToMainMenuWarning("Novi igrac je dodan!");
                 SyncFW();
-                return;
+                ReturnToMainMenuWarning("Novi igrac je dodan!");
+            }
+            break;
+
+        case 2:
+            {
+                Console.Clear();
+                Console.Write("Unesite ime i prezime igraca kojeg zelite obrisati: ");
+
+                string playerName = Console.ReadLine();
+
+                try
+                {
+                    ValidatePlayerName(playerName);
+                    if (!players.ContainsKey(playerName))
+                        throw new();
+                }
+                catch (Exception)
+                {
+                    ReturnToMainMenuWarning($"Neispravno ime!");
+                    return;
+                }
+
+                if (!AskForConfirmation($"Zelite li sigurno obrisati igraca: {playerName}?"))
+                {
+                    ReturnToMainMenuWarning($"Otkazano!");
+                    return;
+                }
+                players.Remove(playerName);
+                fwGoals.Remove(playerName);
+                ReturnToMainMenuWarning($"Igrac obrisan!");
+            }
+            break;
+
+        case 3:
+            {
+                Console.Clear();
+                Console.Write("Unesite ime i prezime igraca kojem zelite urediti ime i prezime: ");
+                string playerName = Console.ReadLine();
+
+                try
+                {
+                    ValidatePlayerName(playerName);
+                    if (!players.ContainsKey(playerName))
+                        throw new();
+                }
+                catch (Exception)
+                {
+                    ReturnToMainMenuWarning($"Neispravno ime!");
+                    return;
+                }
+
+                Console.Write("Unesite novo ime i prezime igraca: ");
+                string newPlayerName = Console.ReadLine();
+                try
+                {
+                    ValidatePlayerName(newPlayerName);
+                }
+                catch (Exception)
+                {
+                    ReturnToMainMenuWarning($"Neispravno ime!");
+                    return;
+                }
+                if (!AskForConfirmation($"Zelite li sigurno izmjeniti ime igraca: {playerName} -> {newPlayerName}?"))
+                {
+                    ReturnToMainMenuWarning($"Otkazano!");
+                    return;
+                }
+
+                var info = players[playerName];
+                players.Remove(playerName);
+                players.Add(newPlayerName, info);
+
+                if(info.Position == "FW")
+                {
+                    var goalsInfo = fwGoals[playerName];
+                    fwGoals.Remove(playerName);
+                    fwGoals.Add(newPlayerName,goalsInfo);
+                }
+                ReturnToMainMenuWarning($"Igrac izmjenjen!");
+            }
+            break;
+        case 4:
+            {
+                Console.Clear();
+                Console.Write("Unesite ime i prezime igraca kojem zelite urediti poziciju: ");
+                string playerName = Console.ReadLine();
+                try
+                {
+                    ValidatePlayerName(playerName);
+                    if (!players.ContainsKey(playerName))
+                        throw new();
+                }
+                catch (Exception)
+                {
+                    ReturnToMainMenuWarning($"Neispravno ime!");
+                    return;
+                }
+                Console.Write("Unesite novu poziciju: ");
+                string newPlayerPosition = Console.ReadLine();
+                try
+                {
+                    ValidatePlayerPosition(newPlayerPosition);
+                }
+                catch (Exception)
+                {
+                    ReturnToMainMenuWarning($"Neispravna pozicija!");
+                    return;
+                }
+                if (!AskForConfirmation($"Zelite li sigurno izmjeniti poziciju: {players[playerName].Position} -> {newPlayerPosition}?"))
+                {
+                    ReturnToMainMenuWarning($"Otkazano!");
+                    return;
+                }
+                var info = players[playerName];
+                info.Position = newPlayerPosition;
+                players[playerName] = info;
+                ReturnToMainMenuWarning($"Pozicija izmjenjena!");
+                SyncFW();
+            }
+            break;
+
+        case 5:
+            {
+                Console.Clear();
+                Console.Write("Unesite ime i prezime igraca kojem zelite urediti rating: ");
+                string playerName = Console.ReadLine();
+                try
+                {
+                    ValidatePlayerName(playerName);
+                    if (!players.ContainsKey(playerName))
+                        throw new();
+                }
+                catch (Exception)
+                {
+                    ReturnToMainMenuWarning($"Neispravno ime!");
+                    return;
+                }
+                Console.Write("Unesite novi rating: ");
+                string userInput = Console.ReadLine();
+                int newPlayerRating;
+                try
+                {
+                    newPlayerRating = int.Parse(userInput);
+                    ValidatePlayerRating(newPlayerRating);
+                }
+                catch (Exception)
+                {
+                    ReturnToMainMenuWarning($"Neispravan rating!");
+                    return;
+                }
+                if (!AskForConfirmation($"Zelite li sigurno izmjeniti rating: {players[playerName].Rating} -> {newPlayerRating}?"))
+                {
+                    ReturnToMainMenuWarning($"Otkazano!");
+                    return;
+                }
+                var info = players[playerName];
+                info.Rating = newPlayerRating;
+                players[playerName] = info;
+                ReturnToMainMenuWarning($"Rating izmjenjen!");
             }
             break;
 
