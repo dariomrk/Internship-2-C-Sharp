@@ -44,15 +44,6 @@ Dictionary<string, (int Points, int Goals, int GoalDiff)> teamScores = new()
 };
 
 // Data validation
-void ValidatePlayerName(string name)
-{
-    if (name == null)
-        throw new Exception("Name cannot be null!");
-    if (name.Trim() == "")
-        throw new Exception("Name cannot be empty!");
-    if (players.ContainsKey(name))
-        throw new Exception("Name already exists!");
-}
 void ValidatePlayerPosition(string position)
 {
     if (position == null)
@@ -131,6 +122,11 @@ void OutputPlayersArray((string Name, string Position, int Rating)[] players)
     {
         Console.WriteLine($"| {player.Name,-21}| {player.Position,-9}| {player.Rating,-7}|");
     }
+}
+void ReturnToMainMenuWarning(string message)
+{
+    Console.WriteLine($"{message} Povratak na glavni meni...");
+    WaitForUser();
 }
 
 // Data manipulation & generation
@@ -290,7 +286,7 @@ Dictionary<string, (string Position, int Rating)> LineupToDict(
     return modifiedPlayers;
 }
 
-// Menus
+// Functionality
 void MainMenu()
 {
     string[] mainMenuOptions =
@@ -328,12 +324,98 @@ void MainMenu()
 
             case 4:
                 // Kontrola igraca
+                PlayerControlMenu();
                 break;
 
             default:
                 break;
         }
     }
+}
+void Training()
+{
+    Console.Clear();
+    Console.WriteLine($"| {"Ime i prezime",-21}| {"Prethodni rating",-17}| {"Novi rating",-12}| {"Razlika",-8}|");
+    for (int i = 0; i < players.Count; i++)
+    {
+        var name = players.Keys.ElementAt(i);
+        int oldRating = players[name].Rating;
+
+        Random r = new();
+        int diff = (int)(r.Next(-5, 6) * 0.01 * oldRating);
+        players[name] = (players[name].Position, SanitizePlayerRating(diff + oldRating));
+
+        Console.WriteLine(@$"| {name,-21}| {oldRating,-17}| {players[name].Rating,-12}| {players[name].Rating - oldRating,-8}|");
+    }
+    WaitForUser();
+}
+void Match()
+{
+    Console.Clear();
+    var lineup = SelectLineup();
+    if (lineup.Length < 11)
+    {
+        Console.WriteLine("Nedovoljan broj igraca! Nije moguce odigrati utakmicu!");
+        WaitForUser();
+        return;
+    }
+
+    (string Team1, string Team2, int Score1, int Score2, bool isOver) match = ("", "", 0, 0, false);
+
+    int i;
+    for (i = 0; i < matchesGroupF.Length; i++)
+    {
+        if ((matchesGroupF[i].Team1 == "Croatia" || matchesGroupF[i].Team2 == "Croatia") && !matchesGroupF[i].isOver)
+        {
+            match = GenerateAndUpdateMatchData(matchesGroupF[i].Team1, matchesGroupF[i].Team2);
+            break;
+        }
+        else if (!matchesGroupF[i].isOver)
+        {
+            matchesGroupF[i] = GenerateAndUpdateMatchData(matchesGroupF[i].Team1, matchesGroupF[i].Team2);
+            OutputPlayedMatches();
+            WaitForUser();
+            return;
+        }
+    }
+
+    if (match.Team1 == "Croatia")
+    {
+        int hasWon = 0;
+        if (match.Score1 > match.Score2)
+            hasWon = 1;
+        else if (match.Score1 == match.Score2)
+            hasWon = 0;
+        else
+            hasWon = -1;
+        lineup = AdjustRating(hasWon, lineup, match.Score1);
+        players = LineupToDict(lineup, players);
+    }
+    else
+    {
+        int hasWon = 0;
+        if (match.Score1 < match.Score2)
+            hasWon = 1;
+        else if (match.Score1 == match.Score2)
+            hasWon = 0;
+        else
+            hasWon = -1;
+        lineup = AdjustRating(hasWon, lineup, match.Score2);
+        players = LineupToDict(lineup, players);
+    }
+
+    if (i < matchesGroupF.Length)
+    {
+        matchesGroupF[i] = match;
+    }
+    else
+    {
+        Console.WriteLine("Sve utakmice su odigrane!");
+        WaitForUser();
+    }
+
+    OutputPlayedMatches();
+    WaitForUser();
 }
 void StatisticsMenu()
 {
@@ -428,7 +510,7 @@ void StatisticsMenu()
             {
                 Console.Clear();
                 Console.WriteLine($"| {"Ime i prezime",-21}| {"Broj golova",-12}|");
-                foreach(var fw in fwGoals)
+                foreach (var fw in fwGoals)
                     Console.WriteLine($"| {fw.Key,-21}| {fw.Value,-12}|");
                 WaitForUser();
             }
@@ -437,8 +519,8 @@ void StatisticsMenu()
             {
                 Console.Clear();
                 Console.WriteLine("Ispis rezultata Hrvatske:");
-                foreach(var match in matchesGroupF)
-                    if((match.Team1 == "Croatia" || match.Team2 == "Croatia") && match.isOver)
+                foreach (var match in matchesGroupF)
+                    if ((match.Team1 == "Croatia" || match.Team2 == "Croatia") && match.isOver)
                         Console.WriteLine($"{match.Team1} {match.Score1}:{match.Score2} {match.Team2}");
                 WaitForUser();
             }
@@ -457,13 +539,13 @@ void StatisticsMenu()
         case 11:
             {
                 List<(string Name, int Points, int Goals, int GoalDiff)> teamScoresList = new();
-                foreach(var team in teamScores)
+                foreach (var team in teamScores)
                 {
-                    teamScoresList.Add((team.Key,team.Value.Points,team.Value.Goals,team.Value.GoalDiff));
+                    teamScoresList.Add((team.Key, team.Value.Points, team.Value.Goals, team.Value.GoalDiff));
                 }
-                teamScoresList.Sort((e1, e2) => 
+                teamScoresList.Sort((e1, e2) =>
                 {
-                    if(e1.Points != e2.Points)
+                    if (e1.Points != e2.Points)
                         return e2.Points.CompareTo(e1.Points);
                     return e2.Name.CompareTo(e1.Name);
                 }
@@ -481,95 +563,92 @@ void StatisticsMenu()
             break;
 
         default:
-            break;
-    }
-}
-
-// Functionality
-void Training()
-{
-    Console.Clear();
-    Console.WriteLine($"| {"Ime i prezime",-21}| {"Prethodni rating",-17}| {"Novi rating",-12}| {"Razlika",-8}|");
-    for (int i = 0; i < players.Count; i++)
-    {
-        var name = players.Keys.ElementAt(i);
-        int oldRating = players[name].Rating;
-
-        Random r = new();
-        int diff = (int)(r.Next(-5, 6) * 0.01 * oldRating);
-        players[name] = (players[name].Position, SanitizePlayerRating(diff + oldRating));
-
-        Console.WriteLine(@$"| {name,-21}| {oldRating,-17}| {players[name].Rating,-12}| {diff,-8}|");
-    }
-    WaitForUser();
-}
-void Match()
-{
-    Console.Clear();
-    var lineup = SelectLineup();
-    if (lineup.Length < 11)
-    {
-        Console.WriteLine("Nedovoljan broj igraca! Nije moguce odigrati utakmicu!");
-        WaitForUser();
-        return;
-    }
-
-    (string Team1, string Team2, int Score1, int Score2, bool isOver) match = ("", "", 0, 0, false);
-
-    int i;
-    for (i = 0; i < matchesGroupF.Length; i++)
-    {
-        if ((matchesGroupF[i].Team1 == "Croatia" || matchesGroupF[i].Team2 == "Croatia") && !matchesGroupF[i].isOver)
-        {
-            match = GenerateAndUpdateMatchData(matchesGroupF[i].Team1, matchesGroupF[i].Team2);
-            break;
-        }
-        else if (!matchesGroupF[i].isOver)
-        {
-            matchesGroupF[i] = GenerateAndUpdateMatchData(matchesGroupF[i].Team1, matchesGroupF[i].Team2);
-            OutputPlayedMatches();
+            Console.WriteLine("Neispravan unos! Povratak na glavni meni...");
             WaitForUser();
-            return;
-        }
+            break;
     }
+}
+void PlayerControlMenu() {
+    string[] playerControlMenuOptions =
+    {
+        "Povratak na glavni meni",
+        "Unos novog igraca",
+        "Brisanje igraca",
+        "Uredi ime i prezime igraca",
+        "Uredi poziciju igraca",
+        "Uredi rating igraca",
+    };
 
-    if (match.Team1 == "Croatia")
-    {
-        int hasWon = 0;
-        if (match.Score1 > match.Score2)
-            hasWon = 1;
-        else if (match.Score1 == match.Score2)
-            hasWon = 0;
-        else
-            hasWon = -1;
-        lineup = AdjustRating(hasWon, lineup, match.Score1);
-        players = LineupToDict(lineup, players);
-    }
-    else
-    {
-        int hasWon = 0;
-        if (match.Score1 < match.Score2)
-            hasWon = 1;
-        else if (match.Score1 == match.Score2)
-            hasWon = 0;
-        else
-            hasWon = -1;
-        lineup = AdjustRating(hasWon, lineup, match.Score2);
-        players = LineupToDict(lineup, players);
-    }
+    int userSelection = OutputMenu(playerControlMenuOptions);
 
-    if (i < matchesGroupF.Length)
+    switch (userSelection)
     {
-        matchesGroupF[i] = match;
-    }
-    else
-    {
-        Console.WriteLine("Sve utakmice su odigrane!");
-        WaitForUser();
-    }
+        case 1:
+            {
+                Console.Clear();
 
-    OutputPlayedMatches();
-    WaitForUser();
+                if(players.Keys.Count == 26)
+                {
+                    ReturnToMainMenuWarning("Ekipa je puna! Nije moguce dodavati nove igrace.");
+                    return;
+                }
+
+                Console.Write("Unesite ime i prezime novog igraca: ");
+                string newPlayerName = Console.ReadLine();
+
+                if(newPlayerName.Trim().Length == 0)
+                {
+                    ReturnToMainMenuWarning($"Neispravno ime!");
+                    return;
+                }
+
+                if(players.ContainsKey(newPlayerName))
+                {
+                    ReturnToMainMenuWarning($"Nije moguce dodati igraca {newPlayerName} kako isti vec postoji!");
+                    return;
+                }
+                (string Position, int Rating) newPlayerInfo = ("",0);
+
+                Console.Write("Unesite poziciju igraca: ");
+                string positionUserInput = Console.ReadLine();
+
+                try
+                {
+                    ValidatePlayerPosition(positionUserInput);
+                }
+                catch (Exception)
+                {
+                    ReturnToMainMenuWarning("Pozicija nije validna!");
+                    return;
+                }
+
+                newPlayerInfo.Position = positionUserInput;
+
+                Console.Write("Unesite rating igraca: ");
+                string ratingUserInput = Console.ReadLine();
+
+                try
+                {
+                    newPlayerInfo.Rating = int.Parse(ratingUserInput);
+                    ValidatePlayerRating(newPlayerInfo.Rating);
+                }
+                catch (Exception)
+                {
+                    ReturnToMainMenuWarning("Rating nije validan!");
+                    return;
+                }
+
+                players.Add(newPlayerName, newPlayerInfo);
+                ReturnToMainMenuWarning("Novi igrac je dodan!");
+                SyncFW();
+                return;
+            }
+            break;
+
+        default:
+            ReturnToMainMenuWarning("Neispravan unos!");
+            break;
+    }
 }
 
 // App
