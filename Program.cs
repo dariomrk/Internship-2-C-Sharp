@@ -1,5 +1,6 @@
 ﻿
-// Vars
+#region Vars
+// Predefined players.
 Dictionary<string, (string Position, int Rating)> players = new()
 {
     {"Luka Modric",("MF",88)},
@@ -23,8 +24,12 @@ Dictionary<string, (string Position, int Rating)> players = new()
     {"Domagoj Vida",("DF", 76)},
     {"Ante Budimir",("FW", 76)},
 };
-Dictionary<string, int> fwGoals = new();
-Dictionary<string, (int Points, int Goals, int GoalDiff)> teamScores = new()
+
+// Used to track goals per player.
+Dictionary<string, int> playersGoals = new();
+
+// Used to track stats for each team.
+Dictionary<string, (int Points, int Goals, int GoalDiff)> groupTeams = new()
 {
     {"Croatia",(0,0,0) },
     {"Morocco",(0,0,0) },
@@ -32,8 +37,11 @@ Dictionary<string, (int Points, int Goals, int GoalDiff)> teamScores = new()
     {"Canada",(0,0,0) },
 };
 
+// Predefined valid player positions.
 string[] validPositions = new string[] { "GK", "DF", "MF", "FW" };
-(string Team1, string Team2, int Score1, int Score2, bool isOver)[] matchesGroupF =
+
+// Predefined matches. Used to track match stats.
+(string Team1, string Team2, int Score1, int Score2, bool isOver)[] groupMatches =
 {
     ("Morocco","Croatia",0,0,false),
     ("Belgium","Canada",0,0,false),
@@ -43,32 +51,35 @@ string[] validPositions = new string[] { "GK", "DF", "MF", "FW" };
     ("Canada","Morocco",0,0,false),
 };
 
-// Data validation
+#endregion
+
+#region Data validation & sanitization
 void ValidatePlayerName(string name)
 {
     if (name == null)
-        throw new Exception("Name cannot be null!");
+        throw new("Name cannot be null!");
     if (name.Trim() == "")
-        throw new Exception("Name cannot be empty!");
+        throw new("Name cannot be empty!");
 }
+
 void ValidatePlayerPosition(string position)
 {
     if (position == null)
-        throw new Exception("Position cannot be null!");
+        throw new("Position cannot be null!");
     if (position.Trim() == "")
-        throw new Exception("Position cannot be empty!");
+        throw new("Position cannot be empty!");
     if (!(validPositions.Contains(position)))
-        throw new Exception("Position is not valid!");
+        throw new("Position is not valid!");
 }
+
 void ValidatePlayerRating(int rating)
 {
     if (rating > 100)
-        throw new Exception("Rating cannot exceed 100!");
+        throw new("Rating cannot exceed 100!");
     if (rating < 0)
-        throw new Exception("Rating subceed 0!");
+        throw new("Rating cannot subceed 0!");
 }
 
-// Data sanitization
 int SanitizePlayerRating(int rating)
 {
     if (rating > 100)
@@ -78,49 +89,63 @@ int SanitizePlayerRating(int rating)
     return rating;
 }
 
-// Input & Output utilities
+#endregion
+
+#region Input & Output utilities
 void WaitForUser()
 {
     Console.WriteLine("Pritisnite bilo koju tipku za nastavak...");
     Console.ReadKey();
 }
-void BadUserInputWarning()
+
+void WarnBadUserInput()
 {
     Console.WriteLine("Unesena opcija nije validna!");
     WaitForUser();
 }
+
+void WarnReturnToMainMenu(string message)
+{
+    Console.WriteLine($"{message} Povratak na glavni meni...");
+    WaitForUser();
+}
+
 int OutputMenu(string[] options)
 {
     while (true)
     {
         Console.Clear();
         for (int i = 0; i<options.Length; i++)
+        {
             Console.WriteLine($"{i,-2} -  {options[i]}");
+        }
 
         Console.Write("Unesite odabranu opciju: ");
         if (!int.TryParse(Console.ReadLine(), out int userInput))
         {
-            BadUserInputWarning();
+            WarnBadUserInput();
             continue;
         }
         if (userInput < 0 || userInput > options.Length - 1)
         {
-            BadUserInputWarning();
+            WarnBadUserInput();
             continue;
         }
         return userInput;
     }
 }
+
 void OutputPlayedMatches()
 {
     Console.Clear();
     Console.WriteLine("Odigrane utakmice:");
-    foreach (var match in matchesGroupF)
+    foreach (var match in groupMatches)
         if (match.isOver)
         {
             Console.WriteLine($"{match.Team1} {match.Score1} : {match.Score2} {match.Team2}");
         }
 }
+
 void OutputPlayersArray((string Name, string Position, int Rating)[] players)
 {
     Console.Clear();
@@ -130,12 +155,8 @@ void OutputPlayersArray((string Name, string Position, int Rating)[] players)
         Console.WriteLine($"| {player.Name,-21}| {player.Position,-9}| {player.Rating,-7}|");
     }
 }
-void ReturnToMainMenuWarning(string message)
-{
-    Console.WriteLine($"{message} Povratak na glavni meni...");
-    WaitForUser();
-}
-bool AskForConfirmation(string message)
+
+bool UserConfirmation(string message)
 {
     Console.Clear();
     while (true)
@@ -156,19 +177,23 @@ bool AskForConfirmation(string message)
     }
 }
 
-// Data manipulation & generation
-void SyncFW()
+#endregion
+
+#region Data manipulation & generation
+void SyncPlayerGoals()
 {
     foreach (var player in players)
         if (player.Value.Position == "FW")
         {
-            if (!fwGoals.ContainsKey(player.Key))
+            if (!playersGoals.ContainsKey(player.Key))
             {
-                fwGoals.Add(player.Key, 0);
+                playersGoals.Add(player.Key, 0);
             }
         }
 }
-(string Name, string Position, int Rating)[] PlayersToArray()
+
+(string Name, string Position, int Rating)[]
+    PlayersToArray()
 {
     List<(string Name, string Position, int Rating)> export = new();
 
@@ -178,13 +203,17 @@ void SyncFW()
     }
     return export.ToArray();
 }
-(string Name, string Position, int Rating)[] PlayersSorted()
+
+(string Name, string Position, int Rating)[]
+    PlayersToSortedArray()
 {
     List<(string Name, string Position, int Rating)> players = new(PlayersToArray());
     players.Sort((e1, e2) => e2.Rating.CompareTo(e1.Rating));
     return players.ToArray();
 }
-(string Name, string Position, int Rating)[] SelectPlayersByPosition(
+
+(string Name, string Position, int Rating)[]
+    PlayersByPosition(
     (string Name, string Position, int Rating)[] players,
     string position,
     int count = 0)
@@ -208,22 +237,29 @@ void SyncFW()
     }
     return selected.ToArray();
 }
-(string Name, string Position, int Rating)[] SelectLineup()
+
+(string Name, string Position, int Rating)[]
+    PlayersLineup()
 {
     List<(string Name, string Position, int Rating)> selected = new();
 
-    selected.AddRange(SelectPlayersByPosition(PlayersSorted(), "GK", 1));
-    selected.AddRange(SelectPlayersByPosition(PlayersSorted(), "DF", 4));
-    selected.AddRange(SelectPlayersByPosition(PlayersSorted(), "MF", 3));
-    selected.AddRange(SelectPlayersByPosition(PlayersSorted(), "FW", 3));
+    selected.AddRange(PlayersByPosition(PlayersToSortedArray(), "GK", 1));
+    selected.AddRange(PlayersByPosition(PlayersToSortedArray(), "DF", 4));
+    selected.AddRange(PlayersByPosition(PlayersToSortedArray(), "MF", 3));
+    selected.AddRange(PlayersByPosition(PlayersToSortedArray(), "FW", 3));
 
     return selected.ToArray();
 }
+
 int RandomScore()
 {
-    // Statistic information: https://docs.bvsalud.org/biblioref/2018/12/965586/goal-scoring-frequency-in-soccer-in-different-age-groups.pdf
-    // Box-Muller transform: https://en.wikipedia.org/wiki/Box%E2%80%93Muller_transform
-    // Score is generated using the statistics information from the referenced document and the Box-Muller transform.
+    // Statistics info:
+    // https://docs.bvsalud.org/biblioref/2018/12/965586/goal-scoring-frequency-in-soccer-in-different-age-groups.pdf
+    // Box-Muller transform:
+    // https://en.wikipedia.org/wiki/Box%E2%80%93Muller_transform
+    // Score is generated using the statistics information from the
+    // referenced document and the Box-Muller transform.
+
     double mean = 2.43;
     double stdDeviation = 1.41;
     Random rand = new();
@@ -233,7 +269,9 @@ int RandomScore()
     double randNormal = mean + stdDeviation * randStdNormal;
     return (int)Math.Round(Math.Abs(randNormal));
 }
-(string Team1, string Team2, int Score1, int Score2, bool isOver) GenerateAndUpdateMatchData(
+
+(string Team1, string Team2, int Score1, int Score2, bool isOver)
+    GenerateAndUpdateMatchData(
     string team1,
     string team2)
 {
@@ -241,26 +279,28 @@ int RandomScore()
     output.Score1 = RandomScore();
     output.Score2 = RandomScore();
 
-    teamScores[team1] = (teamScores[team1].Points, teamScores[team1].Goals + output.Score1, teamScores[team1].Goals + output.Score1 - output.Score2);
-    teamScores[team2] = (teamScores[team2].Points, teamScores[team2].Goals + output.Score2, teamScores[team2].Goals + output.Score2 - output.Score1);
+    groupTeams[team1] = (groupTeams[team1].Points, groupTeams[team1].Goals + output.Score1, groupTeams[team1].Goals + output.Score1 - output.Score2);
+    groupTeams[team2] = (groupTeams[team2].Points, groupTeams[team2].Goals + output.Score2, groupTeams[team2].Goals + output.Score2 - output.Score1);
 
     if (output.Score1 > output.Score2)
     {
-        teamScores[team1]=(teamScores[team1].Points+3, teamScores[team1].Goals, teamScores[team1].GoalDiff);
+        groupTeams[team1]=(groupTeams[team1].Points+3, groupTeams[team1].Goals, groupTeams[team1].GoalDiff);
     }
     else if (output.Score1 < output.Score2)
     {
-        teamScores[team2]=(teamScores[team2].Points+3, teamScores[team2].Goals, teamScores[team2].GoalDiff);
+        groupTeams[team2]=(groupTeams[team2].Points+3, groupTeams[team2].Goals, groupTeams[team2].GoalDiff);
     }
     else
     {
-        teamScores[team1]=(teamScores[team1].Points+1, teamScores[team1].Goals, teamScores[team1].GoalDiff);
-        teamScores[team2]=(teamScores[team2].Points+1, teamScores[team2].Goals, teamScores[team2].GoalDiff);
+        groupTeams[team1]=(groupTeams[team1].Points+1, groupTeams[team1].Goals, groupTeams[team1].GoalDiff);
+        groupTeams[team2]=(groupTeams[team2].Points+1, groupTeams[team2].Goals, groupTeams[team2].GoalDiff);
     }
 
     return output;
 }
-(string Name, string Position, int Rating)[] AdjustRating(
+
+(string Name, string Position, int Rating)[]
+    AdjustRating(
     int hasWon,
     (string Name, string Position, int Rating)[] lineup,
     int numOfGoals)
@@ -279,7 +319,7 @@ int RandomScore()
                 Random r = new();
                 if (r.NextDouble() > 0.5)
                 {
-                    fwGoals[lineup[i].Name]++;
+                    playersGoals[lineup[i].Name]++;
                     lineup[i].Rating = SanitizePlayerRating(lineup[i].Rating + (int)(lineup[i].Rating * 0.05));
                     assignedGoals++;
                 }
@@ -301,19 +341,18 @@ int RandomScore()
 
     return lineup;
 }
-Dictionary<string, (string Position, int Rating)> LineupToDict(
-    (string Name, string Position, int Rating)[] lineup,
-    Dictionary<string, (string Position, int Rating)> players)
+
+void LineupToDict((string Name, string Position, int Rating)[] lineup)
 {
-    Dictionary<string, (string Position, int Rating)> modifiedPlayers = new(players);
     foreach (var player in lineup)
     {
-        modifiedPlayers[player.Name] = (player.Position, player.Rating);
+        players[player.Name] = (player.Position, player.Rating);
     }
-    return modifiedPlayers;
 }
 
-// Functionality
+#endregion
+
+#region Functionality
 void MainMenu()
 {
     string[] mainMenuOptions =
@@ -359,6 +398,7 @@ void MainMenu()
         }
     }
 }
+
 void Training()
 {
     Console.Clear();
@@ -376,10 +416,11 @@ void Training()
     }
     WaitForUser();
 }
+
 void Match()
 {
     Console.Clear();
-    var lineup = SelectLineup();
+    var lineup = PlayersLineup();
     if (lineup.Length < 11)
     {
         Console.WriteLine("Nedovoljan broj igraca! Nije moguce odigrati utakmicu!");
@@ -390,16 +431,16 @@ void Match()
     (string Team1, string Team2, int Score1, int Score2, bool isOver) match = ("", "", 0, 0, false);
 
     int i;
-    for (i = 0; i < matchesGroupF.Length; i++)
+    for (i = 0; i < groupMatches.Length; i++)
     {
-        if ((matchesGroupF[i].Team1 == "Croatia" || matchesGroupF[i].Team2 == "Croatia") && !matchesGroupF[i].isOver)
+        if ((groupMatches[i].Team1 == "Croatia" || groupMatches[i].Team2 == "Croatia") && !groupMatches[i].isOver)
         {
-            match = GenerateAndUpdateMatchData(matchesGroupF[i].Team1, matchesGroupF[i].Team2);
+            match = GenerateAndUpdateMatchData(groupMatches[i].Team1, groupMatches[i].Team2);
             break;
         }
-        else if (!matchesGroupF[i].isOver)
+        else if (!groupMatches[i].isOver)
         {
-            matchesGroupF[i] = GenerateAndUpdateMatchData(matchesGroupF[i].Team1, matchesGroupF[i].Team2);
+            groupMatches[i] = GenerateAndUpdateMatchData(groupMatches[i].Team1, groupMatches[i].Team2);
             OutputPlayedMatches();
             WaitForUser();
             return;
@@ -416,7 +457,7 @@ void Match()
         else
             hasWon = -1;
         lineup = AdjustRating(hasWon, lineup, match.Score1);
-        players = LineupToDict(lineup, players);
+        LineupToDict(lineup);
     }
     else
     {
@@ -428,12 +469,12 @@ void Match()
         else
             hasWon = -1;
         lineup = AdjustRating(hasWon, lineup, match.Score2);
-        players = LineupToDict(lineup, players);
+        LineupToDict(lineup);
     }
 
-    if (i < matchesGroupF.Length)
+    if (i < groupMatches.Length)
     {
-        matchesGroupF[i] = match;
+        groupMatches[i] = match;
     }
     else
     {
@@ -444,6 +485,7 @@ void Match()
     OutputPlayedMatches();
     WaitForUser();
 }
+
 void StatisticsMenu()
 {
     string[] statisticsMenuOptions =
@@ -475,7 +517,7 @@ void StatisticsMenu()
             break;
 
         case 2:
-            OutputPlayersArray(PlayersSorted());
+            OutputPlayersArray(PlayersToSortedArray());
             WaitForUser();
             break;
 
@@ -494,7 +536,7 @@ void StatisticsMenu()
         case 5:
             {
                 Console.Clear();
-                var playersSorted = PlayersSorted();
+                var playersSorted = PlayersToSortedArray();
                 int groupRating = 100;
                 foreach (var player in playersSorted)
                 {
@@ -528,7 +570,7 @@ void StatisticsMenu()
 
         case 7:
             {
-                OutputPlayersArray(SelectLineup());
+                OutputPlayersArray(PlayersLineup());
                 WaitForUser();
             }
             break;
@@ -537,7 +579,7 @@ void StatisticsMenu()
             {
                 Console.Clear();
                 Console.WriteLine($"| {"Ime i prezime",-21}| {"Broj golova",-12}|");
-                foreach (var fw in fwGoals)
+                foreach (var fw in playersGoals)
                     Console.WriteLine($"| {fw.Key,-21}| {fw.Value,-12}|");
                 WaitForUser();
             }
@@ -546,7 +588,7 @@ void StatisticsMenu()
             {
                 Console.Clear();
                 Console.WriteLine("Ispis rezultata Hrvatske:");
-                foreach (var match in matchesGroupF)
+                foreach (var match in groupMatches)
                     if ((match.Team1 == "Croatia" || match.Team2 == "Croatia") && match.isOver)
                         Console.WriteLine($"{match.Team1} {match.Score1}:{match.Score2} {match.Team2}");
                 WaitForUser();
@@ -557,7 +599,7 @@ void StatisticsMenu()
             {
                 Console.Clear();
                 Console.WriteLine($"| {"Ekipa",-10}| {"Bodovi",-7}|");
-                foreach (var team in teamScores)
+                foreach (var team in groupTeams)
                     Console.WriteLine($"| {team.Key,-10}| {team.Value.Points,-7}|");
                 WaitForUser();
             }
@@ -566,7 +608,7 @@ void StatisticsMenu()
         case 11:
             {
                 List<(string Name, int Points, int Goals, int GoalDiff)> teamScoresList = new();
-                foreach (var team in teamScores)
+                foreach (var team in groupTeams)
                 {
                     teamScoresList.Add((team.Key, team.Value.Points, team.Value.Goals, team.Value.GoalDiff));
                 }
@@ -595,6 +637,7 @@ void StatisticsMenu()
             break;
     }
 }
+
 void PlayerControlMenu()
 {
     string[] playerControlMenuOptions =
@@ -617,7 +660,7 @@ void PlayerControlMenu()
 
                 if (players.Keys.Count == 26)
                 {
-                    ReturnToMainMenuWarning("Ekipa je puna! Nije moguce dodavati nove igrace.");
+                    WarnReturnToMainMenu("Ekipa je puna! Nije moguce dodavati nove igrace.");
                     return;
                 }
 
@@ -630,13 +673,13 @@ void PlayerControlMenu()
                 }
                 catch (Exception)
                 {
-                    ReturnToMainMenuWarning($"Neispravno ime!");
+                    WarnReturnToMainMenu($"Neispravno ime!");
                     return;
                 }
 
                 if (players.ContainsKey(newPlayerName))
                 {
-                    ReturnToMainMenuWarning($"Nije moguce dodati igraca {newPlayerName} kako isti vec postoji!");
+                    WarnReturnToMainMenu($"Nije moguce dodati igraca {newPlayerName} kako isti vec postoji!");
                     return;
                 }
                 (string Position, int Rating) newPlayerInfo = ("", 0);
@@ -650,7 +693,7 @@ void PlayerControlMenu()
                 }
                 catch (Exception)
                 {
-                    ReturnToMainMenuWarning("Pozicija nije validna!");
+                    WarnReturnToMainMenu("Pozicija nije validna!");
                     return;
                 }
 
@@ -666,13 +709,13 @@ void PlayerControlMenu()
                 }
                 catch (Exception)
                 {
-                    ReturnToMainMenuWarning("Rating nije validan!");
+                    WarnReturnToMainMenu("Rating nije validan!");
                     return;
                 }
 
                 players.Add(newPlayerName, newPlayerInfo);
-                SyncFW();
-                ReturnToMainMenuWarning("Novi igrac je dodan!");
+                SyncPlayerGoals();
+                WarnReturnToMainMenu("Novi igrac je dodan!");
             }
             break;
 
@@ -691,18 +734,18 @@ void PlayerControlMenu()
                 }
                 catch (Exception)
                 {
-                    ReturnToMainMenuWarning($"Neispravno ime!");
+                    WarnReturnToMainMenu($"Neispravno ime!");
                     return;
                 }
 
-                if (!AskForConfirmation($"Zelite li sigurno obrisati igraca: {playerName}?"))
+                if (!UserConfirmation($"Zelite li sigurno obrisati igraca: {playerName}?"))
                 {
-                    ReturnToMainMenuWarning($"Otkazano!");
+                    WarnReturnToMainMenu($"Otkazano!");
                     return;
                 }
                 players.Remove(playerName);
-                fwGoals.Remove(playerName);
-                ReturnToMainMenuWarning($"Igrac obrisan!");
+                playersGoals.Remove(playerName);
+                WarnReturnToMainMenu($"Igrac obrisan!");
             }
             break;
 
@@ -720,7 +763,7 @@ void PlayerControlMenu()
                 }
                 catch (Exception)
                 {
-                    ReturnToMainMenuWarning($"Neispravno ime!");
+                    WarnReturnToMainMenu($"Neispravno ime!");
                     return;
                 }
 
@@ -732,12 +775,12 @@ void PlayerControlMenu()
                 }
                 catch (Exception)
                 {
-                    ReturnToMainMenuWarning($"Neispravno ime!");
+                    WarnReturnToMainMenu($"Neispravno ime!");
                     return;
                 }
-                if (!AskForConfirmation($"Zelite li sigurno izmjeniti ime igraca: {playerName} -> {newPlayerName}?"))
+                if (!UserConfirmation($"Zelite li sigurno izmjeniti ime igraca: {playerName} -> {newPlayerName}?"))
                 {
-                    ReturnToMainMenuWarning($"Otkazano!");
+                    WarnReturnToMainMenu($"Otkazano!");
                     return;
                 }
 
@@ -745,13 +788,13 @@ void PlayerControlMenu()
                 players.Remove(playerName);
                 players.Add(newPlayerName, info);
 
-                if(info.Position == "FW")
+                if (info.Position == "FW")
                 {
-                    var goalsInfo = fwGoals[playerName];
-                    fwGoals.Remove(playerName);
-                    fwGoals.Add(newPlayerName,goalsInfo);
+                    var goalsInfo = playersGoals[playerName];
+                    playersGoals.Remove(playerName);
+                    playersGoals.Add(newPlayerName, goalsInfo);
                 }
-                ReturnToMainMenuWarning($"Igrac izmjenjen!");
+                WarnReturnToMainMenu($"Igrac izmjenjen!");
             }
             break;
         case 4:
@@ -767,7 +810,7 @@ void PlayerControlMenu()
                 }
                 catch (Exception)
                 {
-                    ReturnToMainMenuWarning($"Neispravno ime!");
+                    WarnReturnToMainMenu($"Neispravno ime!");
                     return;
                 }
                 Console.Write("Unesite novu poziciju: ");
@@ -778,19 +821,19 @@ void PlayerControlMenu()
                 }
                 catch (Exception)
                 {
-                    ReturnToMainMenuWarning($"Neispravna pozicija!");
+                    WarnReturnToMainMenu($"Neispravna pozicija!");
                     return;
                 }
-                if (!AskForConfirmation($"Zelite li sigurno izmjeniti poziciju: {players[playerName].Position} -> {newPlayerPosition}?"))
+                if (!UserConfirmation($"Zelite li sigurno izmjeniti poziciju: {players[playerName].Position} -> {newPlayerPosition}?"))
                 {
-                    ReturnToMainMenuWarning($"Otkazano!");
+                    WarnReturnToMainMenu($"Otkazano!");
                     return;
                 }
                 var info = players[playerName];
                 info.Position = newPlayerPosition;
                 players[playerName] = info;
-                ReturnToMainMenuWarning($"Pozicija izmjenjena!");
-                SyncFW();
+                WarnReturnToMainMenu($"Pozicija izmjenjena!");
+                SyncPlayerGoals();
             }
             break;
 
@@ -807,7 +850,7 @@ void PlayerControlMenu()
                 }
                 catch (Exception)
                 {
-                    ReturnToMainMenuWarning($"Neispravno ime!");
+                    WarnReturnToMainMenu($"Neispravno ime!");
                     return;
                 }
                 Console.Write("Unesite novi rating: ");
@@ -820,27 +863,29 @@ void PlayerControlMenu()
                 }
                 catch (Exception)
                 {
-                    ReturnToMainMenuWarning($"Neispravan rating!");
+                    WarnReturnToMainMenu($"Neispravan rating!");
                     return;
                 }
-                if (!AskForConfirmation($"Zelite li sigurno izmjeniti rating: {players[playerName].Rating} -> {newPlayerRating}?"))
+                if (!UserConfirmation($"Zelite li sigurno izmjeniti rating: {players[playerName].Rating} -> {newPlayerRating}?"))
                 {
-                    ReturnToMainMenuWarning($"Otkazano!");
+                    WarnReturnToMainMenu($"Otkazano!");
                     return;
                 }
                 var info = players[playerName];
                 info.Rating = newPlayerRating;
                 players[playerName] = info;
-                ReturnToMainMenuWarning($"Rating izmjenjen!");
+                WarnReturnToMainMenu($"Rating izmjenjen!");
             }
             break;
 
         default:
-            ReturnToMainMenuWarning("Neispravan unos!");
+            WarnReturnToMainMenu("Neispravan unos!");
             break;
     }
 }
 
+# endregion
+
 // App
-SyncFW();
+SyncPlayerGoals();
 MainMenu();
